@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>EstudAI - Teste</title>
+  <title>EstudAI</title>
+  <script src="https://js.puter.com/v2/"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:system-ui;background:#0f172a;color:#e2e8f0;height:100vh;display:flex;flex-direction:column}
@@ -20,6 +21,11 @@
     textarea:focus{outline:none;border-color:#3b82f6}
     button{background:#2563eb;color:white;border:none;border-radius:12px;padding:0 16px;font-weight:600;cursor:pointer}
     button:disabled{opacity:.5}
+    .typing{display:flex;gap:4px;padding:4px}
+    .dot{width:6px;height:6px;background:#60a5fa;border-radius:50%;animation:b 1.4s infinite}
+    .dot:nth-child(2){animation-delay:.2s}
+    .dot:nth-child(3){animation-delay:.4s}
+    @keyframes b{0%,80%,100%{transform:scale(.8);opacity:.5}40%{transform:scale(1);opacity:1}}
     .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;color:#64748b}
     .empty-icon{font-size:48px;margin-bottom:12px}
   </style>
@@ -28,21 +34,21 @@
   <header>
     <div class="logo">🎓</div>
     <div>
-      <h1>EstudAI (Modo Teste)</h1>
-      <div class="status" id="status">Salvando chats localmente ✓</div>
+      <h1>EstudAI</h1>
+      <div class="status" id="status">IA Gratuita • Chats salvos ✓</div>
     </div>
   </header>
 
   <div class="chat" id="chat">
     <div class="empty" id="empty">
       <div class="empty-icon">💬</div>
-      <p><b>Teste de salvamento</b></p>
-      <p style="font-size:13px;margin-top:8px">Envie uma mensagem e recarregue a página</p>
+      <p><b>Assistente de estudos com IA</b></p>
+      <p style="font-size:13px;margin-top:8px">Pergunte sobre qualquer matéria</p>
     </div>
   </div>
 
   <div class="input-area">
-    <textarea id="input" placeholder="Digite algo para testar..." rows="1"></textarea>
+    <textarea id="input" placeholder="Digite sua dúvida..." rows="1"></textarea>
     <button id="send">Enviar</button>
   </div>
 
@@ -50,14 +56,13 @@
     const chat = document.getElementById('chat');
     const input = document.getElementById('input');
     const send = document.getElementById('send');
+    const status = document.getElementById('status');
     const empty = document.getElementById('empty');
     
-    // CARREGA DO BANCO LOCAL
-    let messages = JSON.parse(localStorage.getItem('estudai_teste') || '[]');
+    let messages = JSON.parse(localStorage.getItem('estudai_chat') || '[]');
     
     function save() {
-      localStorage.setItem('estudai_teste', JSON.stringify(messages));
-      console.log('Salvo!', messages.length, 'mensagens');
+      localStorage.setItem('estudai_chat', JSON.stringify(messages.slice(-100)));
     }
     
     function addMsg(text, isUser) {
@@ -67,57 +72,75 @@
       div.textContent = text;
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
+      return div;
     }
     
-    // MOSTRA HISTÓRICO AO CARREGAR
-    messages.forEach(m => addMsg(m.text, m.isUser));
-    if (messages.length) {
-      empty.style.display = 'none';
-      addMsg(`✓ Histórico carregado! Você tem ${messages.length} mensagens salvas.`, false);
-    }
-    
-    // RESPOSTAS INTELIGENTES (sem IA externa)
-    function getResposta(pergunta) {
-      const p = pergunta.toLowerCase();
-      
-      if (p.includes('oi') || p.includes('olá') || p.includes('ola')) {
-        return 'Olá! 👋 Eu sou o EstudAI em modo teste. Estou salvando todas as nossas conversas no seu navegador. Tente recarregar a página que você vai ver que eu lembro de tudo!';
-      }
-      if (p.includes('matemática') || p.includes('matematica')) {
-        return '📐 Matemática é fundamental! Posso te ajudar com:\n• Equações do 1º e 2º grau\n• Geometria\n• Trigonometria\n• Cálculo\n\nO que você está estudando?';
-      }
-      if (p.includes('história') || p.includes('historia')) {
-        return '📚 História do Brasil ou Mundial?\n\nPosso te ajudar com:\n• Brasil Colônia, Império, República\n• Guerras Mundiais\n• Revolução Francesa\n• Era Vargas';
-      }
-      if (p.includes('teste') || p.includes('salvar')) {
-        return `✅ TESTE FUNCIONANDO!\n\nVocê enviou: "${pergunta}"\n\nAgora recarregue a página (F5 ou puxe para baixo no celular) e veja se esta conversa ainda está aqui. Se estiver, o salvamento está perfeito!`;
-      }
-      
-      return `Recebi sua mensagem: "${pergunta}"\n\nNo modo completo com IA, eu responderia com explicações detalhadas. Por enquanto estou em modo teste para garantir que o salvamento de chats funciona.\n\nTotal de mensagens salvas: ${messages.length + 1}`;
-    }
+    // Carregar histórico
+    messages.forEach(m => addMsg(m.text, m.role === 'user'));
+    if (messages.length) empty.style.display = 'none';
     
     async function sendMsg() {
       const text = input.value.trim();
-      if (!text) return;
+      if (!text || send.disabled) return;
       
       input.value = '';
       input.style.height = 'auto';
-      
-      // Adiciona mensagem do usuário
       addMsg(text, true);
-      messages.push({text, isUser:true, time:Date.now()});
+      messages.push({role:'user', text, time:Date.now()});
       save();
       
       send.disabled = true;
+      status.textContent = 'IA pensando...';
       
-      // Simula digitação
-      await new Promise(r => setTimeout(r, 800));
+      const typing = document.createElement('div');
+      typing.className = 'msg bot';
+      typing.innerHTML = '<div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+      chat.appendChild(typing);
+      chat.scrollTop = chat.scrollHeight;
       
-      // Resposta inteligente
-      const resposta = getResposta(text);
-      addMsg(resposta, false);
-      messages.push({text:resposta, isUser:false, time:Date.now()});
-      save();
+      try {
+        // Verifica se o Puter carregou
+        if (typeof puter === 'undefined') {
+          throw new Error('IA não carregou. Recarregue a página.');
+        }
+        
+        const history = messages.slice(-8).map(m => ({
+          role: m.role === 'user' ? 'user' : 'model',
+          parts: [{text: m.text}]
+        }));
+        
+        const res = await puter.ai.chat([
+          {role:'user', parts:[{text:'Você é o EstudAI, um tutor brasileiro amigável e didático. Responda em português, seja claro e use exemplos práticos.'}]},
+          {role:'model', parts:[{text:'Olá! Sou o EstudAI, pronto para te ajudar nos estudos. O que você quer aprender hoje?'}]},
+          ...history,
+          {role:'user', parts:[{text}]}
+        ], {model:'google/gemini-2.5-flash', stream:true});
+        
+        typing.remove();
+        let fullText = '';
+        const botDiv = addMsg('', false);
+        
+        for await (const part of res) {
+          if (part?.text) {
+            fullText += part.text;
+            botDiv.textContent = fullText;
+            chat.scrollTop = chat.scrollHeight;
+          }
+        }
+        
+        messages.push({role:'assistant', text:fullText, time:Date.now()});
+        save();
+        status.textContent = 'IA Gratuita • Chats salvos ✓';
+        
+      } catch (e) {
+        typing.remove();
+        console.error(e);
+        const errorMsg = e.message.includes('Failed to fetch') 
+          ? 'Erro de conexão. Verifique sua internet e tente novamente.'
+          : 'Erro: ' + e.message;
+        addMsg('❌ ' + errorMsg, false);
+        status.textContent = 'Erro - tente novamente';
+      }
       
       send.disabled = false;
       input.focus();
@@ -134,8 +157,6 @@
       input.style.height = 'auto';
       input.style.height = Math.min(input.scrollHeight, 120) + 'px';
     };
-    
-    input.focus();
   </script>
 </body>
 </html>
